@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: imece
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/imece}
+    username: ${DB_USERNAME:root}
+    # No default on purpose: the app must fail fast instead of running with a guessed password.
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Development only; switch to "validate" before the AWS deployment.
+      ddl-auto: update
+    # Keeps lazy loading inside the service layer, so controllers cannot trigger hidden queries.
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    time-zone: Europe/Istanbul
