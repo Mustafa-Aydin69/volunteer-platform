@@ -1,11 +1,15 @@
 package com.imece.controller;
 
+import com.imece.config.AuthenticatedUser;
 import com.imece.dto.AuthResponse;
 import com.imece.dto.LoginRequest;
 import com.imece.dto.RegisterRequest;
+import com.imece.dto.UserResponse;
 import com.imece.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,5 +36,12 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    // Protected by anyRequest().authenticated(): without a valid token the request never
+    // gets here, so "me" is always the principal the JWT filter put in the security context.
+    @GetMapping("/me")
+    public UserResponse me(@AuthenticationPrincipal AuthenticatedUser me) {
+        return authService.getCurrentUser(me.id());
     }
 }
