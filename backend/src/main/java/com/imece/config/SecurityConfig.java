@@ -46,6 +46,9 @@ public class SecurityConfig {
                                 "/api/categories", "/api/stats", "/certificates/**").permitAll()
                         // Spring forwards errors here; blocking it would hide real errors behind 401.
                         .requestMatchers("/error").permitAll()
+                        // The page itself must load without a token; the token is entered inside it.
+                        // When SWAGGER_ENABLED=false these paths simply return 404.
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/org/**").hasRole("ORGANIZATION")
                         .requestMatchers("/api/volunteer/**").hasRole("VOLUNTEER")
