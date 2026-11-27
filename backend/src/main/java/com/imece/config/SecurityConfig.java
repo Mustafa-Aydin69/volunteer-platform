@@ -54,10 +54,10 @@ public class SecurityConfig {
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, ex) ->
                                 writeError(response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED,
-                                        "Authentication required"))
+                                        "Giriş yapmanız gerekiyor"))
                         .accessDeniedHandler((request, response, ex) ->
                                 writeError(response, objectMapper, HttpServletResponse.SC_FORBIDDEN,
-                                        "Access denied")))
+                                        "Bu işlem için yetkiniz yok")))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService, userRepository),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
