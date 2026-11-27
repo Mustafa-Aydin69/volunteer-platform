@@ -298,8 +298,46 @@ bu commit'ten sonra da aynı sonucu vermeli.
 
 ---
 
-## Sonraki faz (henüz yazılmadı)
+## 4b – Faz 5: Swagger UI
 
-- **4b – Faz 5: Swagger UI.** `springdoc-openapi` ile `http://localhost:8080/swagger-ui.html`
-  sayfası; JWT için **Authorize** butonu; yayında bir ortam değişkeniyle kapatılabilir.
-  Eklenince yukarıdaki testler PowerShell yerine tarayıcıdan da yapılabilecek.
+- Commit'ler (eskiden yeniye):
+  - `8a1051c build(api): add springdoc-openapi dependency`
+  - `bfad16e feat(api): configure OpenAPI info and JWT authorization`
+  - `7424bfd feat(security): allow anonymous access to Swagger UI`
+  - `783b519 feat(api): make Swagger UI switchable by environment variable`
+- Durum: ⏳ Bekliyor
+- Ön koşul: `pom.xml` değişti. "0. İlk kurulum" 2. adımdaki **Load Maven Changes**'i
+  bu commit'ten sonra tekrar yap (springdoc indirilecek).
+
+Swagger çalışınca Faz 2–4 testlerini PowerShell yerine buradan da yapabilirsin:
+endpoint'i aç → **Try it out** → gövdeyi doldur → **Execute**.
+
+### Testler
+1. **Sayfa açılıyor mu?** Uygulamayı çalıştır, tarayıcıda
+   `http://localhost:8080/swagger-ui.html` adresini aç.
+   - Beklenen: başlıkta **İmece API**, altında `auth-controller` grubu ve içinde
+     `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`.
+     Sağ üstte yeşil **Authorize** butonu.
+2. **Token olmadan /me**: `GET /api/auth/me` → **Try it out** → **Execute**.
+   - Beklenen: Responses bölümünde `Code 401`, gövde `{"message":"Giriş yapmanız gerekiyor"}`.
+3. **Login ile token al**: `POST /api/auth/login` → **Try it out** → gövdeyi şöyle yap:
+   `{ "email": "elif@test.com", "password": "sifre1234" }` → **Execute**.
+   - Beklenen: `Code 200`, yanıtta `token`. `token` değerini tırnaklar olmadan kopyala.
+4. **Authorize**: sağ üstteki **Authorize** → **Value** kutusuna token'ı yapıştır
+   (başına `Bearer` yazma, Swagger kendisi ekler) → **Authorize** → **Close**.
+   - Beklenen: endpoint'lerin yanındaki kilit simgeleri kapalı hale gelir.
+5. **Token ile /me**: `GET /api/auth/me` → **Execute**.
+   - Beklenen: `Code 200`, `email` = `elif@test.com`.
+6. **Kapatma ayarı**: IntelliJ'de **Edit Configurations...** → `ImeceApplication-local` →
+   Environment variables sonuna `;SWAGGER_ENABLED=false` ekle → **Apply** → **OK** →
+   uygulamayı yeniden başlat → `http://localhost:8080/swagger-ui.html` adresini yenile.
+   - Beklenen: sayfa açılmaz (404). Sonra `;SWAGGER_ENABLED=false` kısmını sil,
+     **Apply** → **OK**, uygulamayı yeniden başlat; sayfa tekrar açılmalı.
+
+### Sonuç
+- [ ] Test 1
+- [ ] Test 2
+- [ ] Test 3
+- [ ] Test 4
+- [ ] Test 5
+- [ ] Test 6
