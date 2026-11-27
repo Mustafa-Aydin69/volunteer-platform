@@ -1,6 +1,7 @@
 package com.imece.controller;
 
 import com.imece.dto.AuthResponse;
+import com.imece.dto.LoginRequest;
 import com.imece.dto.RegisterRequest;
 import com.imece.service.AuthService;
 import jakarta.validation.Valid;
@@ -26,5 +27,10 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }
