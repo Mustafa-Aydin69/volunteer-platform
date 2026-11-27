@@ -89,10 +89,16 @@ public class AuthService {
             throw new ApiException(HttpStatus.FORBIDDEN, "Hesabınız pasif durumda");
         }
 
+        return new AuthResponse(jwtService.generateToken(user), toUserResponse(user));
+    }
+
+    // Shared by login and the current-user lookup: both start from a stored user and
+    // need the organization status only when the user is an organization.
+    private UserResponse toUserResponse(User user) {
         Organization organization = user.getRole() == Role.ORGANIZATION
                 ? organizationRepository.findByUserId(user.getId()).orElse(null)
                 : null;
-        return new AuthResponse(jwtService.generateToken(user), UserResponse.from(user, organization));
+        return UserResponse.from(user, organization);
     }
 
     // Always runs one BCrypt comparison, even for an unknown user (see dummyPasswordHash).
