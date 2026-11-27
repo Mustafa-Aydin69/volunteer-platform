@@ -130,3 +130,105 @@ Not: Testler veritabanına kayıt ekler. Testleri ikinci kez çalıştırırsan 
 - [ ] Test 5
 - [ ] Test 6
 - [ ] Test 7
+
+---
+
+## 4b – Faz 3: Giriş (login)
+
+- Commit'ler (eskiden yeniye):
+  - `319d897 feat(auth): add login request DTO`
+  - `b77ea21 feat(auth): add login logic to auth service`
+  - `e71ae28 feat(auth): add login endpoint`
+- Durum: ⏳ Bekliyor
+- Ön koşul: Faz 2 testleri yapılmış olmalı (`elif@test.com` ve `yesiladim@test.com` hesapları var).
+
+### Hazırlık
+Aynı PowerShell penceresinde şu iki fonksiyonu yapıştırıp Enter'a bas.
+`Send-Login` başarılı girişte token'ı `$global:token` değişkenine saklar;
+`Send-Get` o token ile korumalı bir adrese istek atar.
+```powershell
+function Send-Login($body) {
+    $json = [Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json))
+    try {
+        $r = Invoke-RestMethod -Uri http://localhost:8080/api/auth/login -Method Post `
+            -ContentType 'application/json; charset=utf-8' -Body $json
+        $global:token = $r.token
+        "STATUS 200"; $r | ConvertTo-Json -Depth 5
+    } catch {
+        "STATUS " + [int]$_.Exception.Response.StatusCode; $_.ErrorDetails.Message
+    }
+}
+function Send-Get($url) {
+    try {
+        $r = Invoke-RestMethod -Uri $url -Headers @{ Authorization = "Bearer $global:token" }
+        "STATUS 200"; $r | ConvertTo-Json -Depth 5
+    } catch {
+        "STATUS " + [int]$_.Exception.Response.StatusCode; $_.ErrorDetails.Message
+    }
+}
+```
+- Beklenen: hiçbir çıktı yok.
+
+### Testler
+1. **Admin girişi** (`ADMIN_EMAIL` ve `ADMIN_PASSWORD` olarak IntelliJ'e ne yazdıysan onları kullan)
+   ```powershell
+   Send-Login @{ email='admin@imece.local'; password='ADMIN_SIFREN' }
+   ```
+   - Beklenen: `STATUS 200`, `token` dolu, `user.role` = `ADMIN`.
+2. **Admin token'ı admin adresinde**
+   ```powershell
+   Send-Get 'http://localhost:8080/api/admin/dashboard'
+   ```
+   - Beklenen: `STATUS 404` (mesaj İngilizce olabilir: `No static resource ...`).
+     404 doğru sonuç: güvenlik katmanı token'ı kabul edip isteği geçirdi, sadece bu
+     adreste henüz bir controller yok. 401 veya 403 görürsen test başarısız.
+3. **Gönüllü girişi, e-posta büyük harfle**
+   ```powershell
+   Send-Login @{ email='ELIF@TEST.COM'; password='sifre1234' }
+   ```
+   - Beklenen: `STATUS 200`, `user.email` = `elif@test.com`, `user.role` = `VOLUNTEER`.
+4. **Gönüllü token'ı admin adresinde**
+   ```powershell
+   Send-Get 'http://localhost:8080/api/admin/dashboard'
+   ```
+   - Beklenen: `STATUS 403`, `{"message":"Bu işlem için yetkiniz yok"}`
+5. **Yanlış şifre**
+   ```powershell
+   Send-Login @{ email='elif@test.com'; password='yanlis1234' }
+   ```
+   - Beklenen: `STATUS 401`, `{"message":"E-posta veya şifre hatalı"}`
+6. **Kayıtlı olmayan e-posta**
+   ```powershell
+   Send-Login @{ email='yok@test.com'; password='sifre1234' }
+   ```
+   - Beklenen: 5. testle **birebir aynı** yanıt: `STATUS 401`, `{"message":"E-posta veya şifre hatalı"}`
+7. **Onay bekleyen STK girişi**
+   ```powershell
+   Send-Login @{ email='yesiladim@test.com'; password='sifre1234' }
+   ```
+   - Beklenen: `STATUS 200`, `user.role` = `ORGANIZATION`, `user.organizationStatus` = `PENDING`.
+8. **Boş şifre**
+   ```powershell
+   Send-Login @{ email='elif@test.com'; password='' }
+   ```
+   - Beklenen: `STATUS 400`, `{"message":"password: Şifre boş olamaz"}`
+9. **Pasif hesap**
+   - MySQL Workbench'te: `UPDATE imece.users SET enabled = 0 WHERE email = 'elif@test.com';`
+   ```powershell
+   Send-Login @{ email='elif@test.com'; password='sifre1234' }
+   ```
+   - Beklenen: `STATUS 403`, `{"message":"Hesabınız pasif durumda"}`
+   - Bitince geri al: `UPDATE imece.users SET enabled = 1 WHERE email = 'elif@test.com';`
+     (Workbench "safe update" uyarısı verirse: Edit > Preferences > SQL Editor >
+     en alttaki **Safe Updates** kutusunu kaldır → OK → Query > Reconnect to Server.)
+
+### Sonuç
+- [ ] Test 1
+- [ ] Test 2
+- [ ] Test 3
+- [ ] Test 4
+- [ ] Test 5
+- [ ] Test 6
+- [ ] Test 7
+- [ ] Test 8
+- [ ] Test 9
