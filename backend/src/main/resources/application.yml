@@ -32,3 +32,11 @@ app:
     password: ${ADMIN_PASSWORD:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+# Swagger UI at /swagger-ui.html. On by default for development and the demo;
+# set SWAGGER_ENABLED=false on the server to hide the API map.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}

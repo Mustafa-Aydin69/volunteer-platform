@@ -29,14 +29,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         FieldError error = ex.getBindingResult().getFieldError();
         String message = error == null
-                ? "Invalid request"
+                ? "Geçersiz istek"
                 : error.getField() + ": " + error.getDefaultMessage();
         return build(HttpStatus.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
-        return build(HttpStatus.BAD_REQUEST, "Malformed request body");
+        return build(HttpStatus.BAD_REQUEST, "İstek gövdesi okunamadı");
     }
 
     @ExceptionHandler(Exception.class)
@@ -46,8 +46,9 @@ public class GlobalExceptionHandler {
         if (ex instanceof ErrorResponse springError) {
             return build(springError.getStatusCode(), springError.getBody().getDetail());
         }
+        // The log stays in English for developers; only the user-facing message is translated.
         log.error("Unexpected error", ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Beklenmeyen bir hata oluştu");
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatusCode status, String message) {
