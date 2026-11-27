@@ -232,3 +232,74 @@ function Send-Get($url) {
 - [ ] Test 7
 - [ ] Test 8
 - [ ] Test 9
+
+---
+
+## 4b – Faz 4: Giriş yapan kullanıcı (/me)
+
+- Commit'ler (eskiden yeniye):
+  - `27f07de refactor(auth): extract user response builder`
+  - `add2c3a feat(auth): add current user lookup to auth service`
+  - `862b1d6 feat(auth): add current user endpoint`
+- Durum: ⏳ Bekliyor
+- Ön koşul: Faz 3'teki `Send-Login` ve `Send-Get` fonksiyonları aynı PowerShell
+  penceresinde tanımlı olmalı. Pencereyi kapattıysan Faz 3 "Hazırlık"ı tekrar yapıştır.
+
+Not: `27f07de` yalnızca kodu yeniden düzenler, davranışı değiştirmez. Faz 3 testleri
+bu commit'ten sonra da aynı sonucu vermeli.
+
+### Testler
+1. **Gönüllü token'ıyla /me**
+   ```powershell
+   Send-Login @{ email='elif@test.com'; password='sifre1234' }
+   Send-Get 'http://localhost:8080/api/auth/me'
+   ```
+   - Beklenen (ikinci komut): `STATUS 200`, `email` = `elif@test.com`,
+     `role` = `VOLUNTEER`, `organizationStatus` = `null`. Yanıtta `token` **yok**.
+2. **STK token'ıyla /me**
+   ```powershell
+   Send-Login @{ email='yesiladim@test.com'; password='sifre1234' }
+   Send-Get 'http://localhost:8080/api/auth/me'
+   ```
+   - Beklenen: `STATUS 200`, `role` = `ORGANIZATION`, `organizationStatus` = `PENDING`.
+3. **Token olmadan**
+   ```powershell
+   $global:token = ''
+   Send-Get 'http://localhost:8080/api/auth/me'
+   ```
+   - Beklenen: `STATUS 401`, `{"message":"Giriş yapmanız gerekiyor"}`
+4. **Bozuk token**
+   ```powershell
+   $global:token = 'abc'
+   Send-Get 'http://localhost:8080/api/auth/me'
+   ```
+   - Beklenen: `STATUS 401`, `{"message":"Giriş yapmanız gerekiyor"}`
+5. **Pasife alınan kullanıcı anında kesilir**
+   ```powershell
+   Send-Login @{ email='elif@test.com'; password='sifre1234' }
+   Send-Get 'http://localhost:8080/api/auth/me'
+   ```
+   - Beklenen: önce `STATUS 200`.
+   - Şimdi MySQL Workbench'te: `UPDATE imece.users SET enabled = 0 WHERE email = 'elif@test.com';`
+   - **Yeniden giriş yapmadan**, aynı token'la tekrar:
+     ```powershell
+     Send-Get 'http://localhost:8080/api/auth/me'
+     ```
+   - Beklenen: `STATUS 401`. Token'ın süresi dolmamış olsa bile erişim kesildi;
+     çünkü filtre her istekte kullanıcıyı veritabanından yeniden okuyor.
+   - Geri al: `UPDATE imece.users SET enabled = 1 WHERE email = 'elif@test.com';`
+
+### Sonuç
+- [ ] Test 1
+- [ ] Test 2
+- [ ] Test 3
+- [ ] Test 4
+- [ ] Test 5
+
+---
+
+## Sonraki faz (henüz yazılmadı)
+
+- **4b – Faz 5: Swagger UI.** `springdoc-openapi` ile `http://localhost:8080/swagger-ui.html`
+  sayfası; JWT için **Authorize** butonu; yayında bir ortam değişkeniyle kapatılabilir.
+  Eklenince yukarıdaki testler PowerShell yerine tarayıcıdan da yapılabilecek.
