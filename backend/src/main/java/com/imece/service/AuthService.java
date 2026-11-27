@@ -1,6 +1,7 @@
 package com.imece.service;
 
 import com.imece.dto.AuthResponse;
+import com.imece.dto.LoginRequest;
 import com.imece.dto.RegisterRequest;
 import com.imece.dto.UserResponse;
 import com.imece.entity.Organization;
@@ -25,10 +26,18 @@ public class AuthService {
     // Turkish letters take 2 bytes in UTF-8, so 72 characters can exceed this limit.
     private static final int BCRYPT_MAX_BYTES = 72;
 
+    // Same message for unknown e-mail and wrong password, so it cannot be used to
+    // discover which addresses are registered.
+    private static final String INVALID_CREDENTIALS = "E-posta veya şifre hatalı";
+
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+
+    // Compared against when the e-mail does not exist, so an unknown address costs the same
+    // BCrypt time as a known one and response time does not reveal registered accounts.
+    private final String dummyPasswordHash;
 
     public AuthService(UserRepository userRepository, OrganizationRepository organizationRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService) {
@@ -36,6 +45,7 @@ public class AuthService {
         this.organizationRepository = organizationRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-timing");
     }
 
     // One transaction: if saving the organization fails, the user row is rolled back too,
@@ -63,6 +73,37 @@ public class AuthService {
         }
 
         return new AuthResponse(jwtService.generateToken(user), UserResponse.from(user, organization));
+    }
+
+    // Read-only: no write happens, and Hibernate can skip dirty checking.
+    @Transactional(readOnly = true)
+    public AuthResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(normalizeEmail(request.email())).orElse(null);
+
+        if (!passwordMatches(request.password(), user)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, INVALID_CREDENTIALS);
+        }
+        // Checked only after the password, so "inactive" is never shown to someone who
+        // merely guessed an e-mail address.
+        if (!user.isEnabled()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Hesabınız pasif durumda");
+        }
+
+        Organization organization = user.getRole() == Role.ORGANIZATION
+                ? organizationRepository.findByUserId(user.getId()).orElse(null)
+                : null;
+        return new AuthResponse(jwtService.generateToken(user), UserResponse.from(user, organization));
+    }
+
+    // Always runs one BCrypt comparison, even for an unknown user (see dummyPasswordHash).
+    private boolean passwordMatches(String rawPassword, User user) {
+        // Registration never accepts such passwords, and BCrypt would throw on them.
+        if (rawPassword.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
+            return false;
+        }
+        String hash = user == null ? dummyPasswordHash : user.getPasswordHash();
+        boolean matches = passwordEncoder.matches(rawPassword, hash);
+        return user != null && matches;
     }
 
     // Rules that @Valid on the DTO cannot express: they depend on another field or on bytes.
