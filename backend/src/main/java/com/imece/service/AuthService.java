@@ -92,6 +92,15 @@ public class AuthService {
         return new AuthResponse(jwtService.generateToken(user), toUserResponse(user));
     }
 
+    // The id comes from the JWT filter, which already rejected unknown and disabled users;
+    // the 404 only covers the unlikely case of the row disappearing in between.
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Kullanıcı bulunamadı"));
+        return toUserResponse(user);
+    }
+
     // Shared by login and the current-user lookup: both start from a stored user and
     // need the organization status only when the user is an organization.
     private UserResponse toUserResponse(User user) {
